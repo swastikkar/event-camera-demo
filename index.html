@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event-Based Camera System Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            padding: 30px 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1em;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 32px;
+            font-size: 0.95em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            font-family: inherit;
+        }
+
+        .start-btn {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .start-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .stop-btn {
+            background: #ef4444;
+            color: white;
+        }
+
+        .stop-btn:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .pause-btn {
+            background: #f59e0b;
+            color: white;
+            padding: 12px 28px;
+        }
+
+        .pause-btn:hover {
+            background: #d97706;
+            transform: translateY(-1px);
+        }
+
+        .slider-control {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px 30px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 25px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .slider-control h3 {
+            margin-bottom: 15px;
+            font-size: 1em;
+            text-align: center;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .slider-wrapper label {
+            min-width: 100px;
+            color: #94a3b8;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #334155;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            background: #2563eb;
+            box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .slider::-moz-range-thumb:hover {
+            background: #2563eb;
+            box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.2);
+        }
+
+        .slider-value {
+            min-width: 100px;
+            text-align: right;
+            font-weight: 600;
+            color: #3b82f6;
+            font-size: 0.9em;
+        }
+
+        .stats-summary {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 25px;
+        }
+
+        .stats-summary h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-card {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .summary-card-value {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #60a5fa;
+        }
+
+        .summary-card-label {
+            color: #94a3b8;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .camera-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .camera-panel {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .camera-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-on {
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        .status-off {
+            background: #475569;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .overlay-label {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.75em;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .label-on {
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+        }
+
+        .label-motion {
+            background: rgba(234, 179, 8, 0.9);
+            color: white;
+        }
+
+        .label-static {
+            background: rgba(71, 85, 105, 0.9);
+            color: #cbd5e1;
+        }
+
+        .stats {
+            display: grid;
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: #0f172a;
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .description {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            color: #93c5fd;
+            margin-top: 12px;
+            line-height: 1.5;
+        }
+
+        .chart-container {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 25px;
+        }
+
+        .chart-container h2 {
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            text-align: center;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        #performanceChart {
+            max-height: 300px;
+        }
+
+        .comparison {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+        }
+
+        .comparison h2 {
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .comparison-stat {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #22c55e;
+            margin-bottom: 5px;
+        }
+
+        .comparison-label {
+            color: #94a3b8;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .instructions {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 25px;
+        }
+
+        .instructions h3 {
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            color: #94a3b8;
+            line-height: 1.8;
+            font-size: 0.9em;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        .timeline-container {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 25px;
+        }
+
+        .timeline-container h3 {
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #e2e8f0;
+            text-align: center;
+        }
+
+        .timeline-wrapper {
+            position: relative;
+            height: 60px;
+            background: #0f172a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .timeline-bar {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e 0%, #3b82f6 100%);
+            opacity: 0.6;
+            transition: all 0.3s;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 80%;
+            background: #60a5fa;
+        }
+
+        .timeline-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #94a3b8;
+        }
+
+        .heatmap-toggle {
+            position: absolute;
+            top: 50px;
+            right: 12px;
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .heatmap-toggle:hover {
+            background: rgba(37, 99, 235, 1);
+            transform: translateY(-1px);
+        }
+
+        .heatmap-toggle.active {
+            background: #22c55e;
+        }
+
+        .heatmap-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        footer {
+            margin-top: 40px;
+            padding: 25px;
+            text-align: center;
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        footer h4 {
+            font-size: 1em;
+            margin-bottom: 12px;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .team-members {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .member {
+            text-align: center;
+        }
+
+        .member-name {
+            font-weight: 600;
+            color: #60a5fa;
+            font-size: 0.95em;
+        }
+
+        .member-id {
+            color: #94a3b8;
+            font-size: 0.85em;
+            margin-top: 2px;
+        }
+
+        footer .project-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+
+        @media (max-width: 768px) {
+            .camera-grid, .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .team-members {
+                gap: 15px;
+            }
+        }
+
+        video {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Event-Based Camera System</h1>
+            <p class="subtitle">Real-time comparison of traditional and event-based vision sensors</p>
+        </header>
+
+        <div class="controls">
+            <div class="button-group">
+                <button id="startBtn" class="start-btn">Start Camera Demo</button>
+                <button id="stopBtn" class="stop-btn" style="display: none;">Stop Camera</button>
+                <button id="pauseBtn" class="pause-btn" style="display: none;">⏸ Pause</button>
+            </div>
+        </div>
+
+        <!-- Sensitivity Slider -->
+        <div class="slider-control" id="sliderControl" style="display: none;">
+            <h3>Motion Detection Settings</h3>
+            <div class="slider-wrapper">
+                <label>Sensitivity</label>
+                <input type="range" min="5" max="30" value="15" class="slider" id="sensitivitySlider">
+                <span class="slider-value" id="sensitivityValue">Medium</span>
+            </div>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <!-- Statistics Summary Card -->
+        <div class="stats-summary" id="statsSummary" style="display: none;">
+            <h2>Session Statistics</h2>
+            <div class="stats-grid">
+                <div class="summary-card">
+                    <div class="summary-card-value" id="totalRuntime">0s</div>
+                    <div class="summary-card-label">Total Runtime</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-value" id="motionEvents">0</div>
+                    <div class="summary-card-label">Motion Events</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-value" id="avgSavings">0%</div>
+                    <div class="summary-card-label">Storage Saved</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-value" id="efficiencyScore">0%</div>
+                    <div class="summary-card-label">Efficiency Score</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="camera-grid">
+            <!-- Traditional Camera -->
+            <div class="camera-panel">
+                <div class="camera-header">
+                    <h2 class="camera-title">
+                        <span>Traditional Camera</span>
+                    </h2>
+                    <div class="status-indicator status-on" id="trad-status"></div>
+                </div>
+                
+                <div class="video-container">
+                    <video id="tradVideo" autoplay playsinline></video>
+                    <canvas id="tradCanvas" width="640" height="480"></canvas>
+                    <div class="overlay-label label-on">ALWAYS ON</div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-box">
+                        <span class="stat-label">FPS</span>
+                        <span class="stat-value" id="tradFps">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Storage</span>
+                        <span class="stat-value" id="tradStorage">0 KB</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Power</span>
+                        <span class="stat-value" id="tradPower">0 mW</span>
+                    </div>
+                </div>
+
+                <div class="description">
+                    Continuously captures frames at fixed rate, consuming constant power and storage
+                </div>
+            </div>
+
+            <!-- Event Camera -->
+            <div class="camera-panel">
+                <div class="camera-header">
+                    <h2 class="camera-title">
+                        <span>Event-Based Camera</span>
+                    </h2>
+                    <div class="status-indicator status-off" id="event-status"></div>
+                </div>
+                
+                <div class="video-container">
+                    <video id="eventVideo" autoplay playsinline></video>
+                    <canvas id="eventCanvas" width="640" height="480"></canvas>
+                    <canvas id="heatmapCanvas" class="heatmap-canvas" width="640" height="480" style="display: none;"></canvas>
+                    <div class="overlay-label label-static" id="eventLabel">STATIC - OFF</div>
+                    <button class="heatmap-toggle" id="heatmapToggle">Show Heatmap</button>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-box">
+                        <span class="stat-label">FPS</span>
+                        <span class="stat-value" id="eventFps">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Storage</span>
+                        <span class="stat-value" id="eventStorage">0 KB</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Power</span>
+                        <span class="stat-value" id="eventPower">0 mW</span>
+                    </div>
+                </div>
+
+                <div class="description">
+                    Only captures when motion detected, dramatically reducing power and storage usage
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="chart-container" id="chartContainer" style="display: none;">
+            <h2>Real-Time Performance Tracking</h2>
+            <canvas id="performanceChart"></canvas>
+        </div>
+
+        <div class="comparison" id="comparison" style="display: none;">
+            <h2>Efficiency Comparison</h2>
+            <div class="comparison-grid">
+                <div>
+                    <div class="comparison-stat" id="storageSaved">0%</div>
+                    <div class="comparison-label">Storage Saved</div>
+                </div>
+                <div>
+                    <div class="comparison-stat" id="powerSaved">0%</div>
+                    <div class="comparison-label">Power Saved (estimated)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Timeline -->
+        <div class="timeline-container" id="timelineContainer" style="display: none;">
+            <h3>Motion Activity Timeline</h3>
+            <div class="timeline-wrapper" id="timelineWrapper"></div>
+            <div class="timeline-labels">
+                <span>0s</span>
+                <span id="timelineEnd">30s</span>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Use</h3>
+            <ol>
+                <li>Click "Start Camera Demo" to activate your webcam</li>
+                <li>Stay still and observe the event camera turn off</li>
+                <li>Move to trigger motion detection</li>
+                <li>Adjust sensitivity using the slider above</li>
+                <li>Use pause to freeze and analyze the comparison</li>
+                <li>Compare real-time metrics and efficiency statistics</li>
+            </ol>
+        </div>
+
+        <!-- Credits Footer -->
+        <footer>
+            <h4>Project Team</h4>
+            <div class="team-members">
+                <div class="member">
+                    <div class="member-name">Jiah Shah</div>
+                    <div class="member-id">E006</div>
+                </div>
+                <div class="member">
+                    <div class="member-name">Kavya Jain</div>
+                    <div class="member-id">E022</div>
+                </div>
+                <div class="member">
+                    <div class="member-name">Swastik Kar</div>
+                    <div class="member-id">E027</div>
+                </div>
+                <div class="member">
+                    <div class="member-name">Vedant Kokate</div>
+                    <div class="member-id">E031</div>
+                </div>
+            </div>
+            <div class="project-info">
+                Event-Based Camera System Demonstration © 2025
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        let stream = null;
+        let animationId = null;
+        let previousFrame = null;
+        let startTime = 0;
+        
+        let traditionalFps = 0;
+        let eventFps = 0;
+        let traditionalStorage = 0;
+        let eventStorage = 0;
+        let traditionalPower = 0;
+        let eventPower = 0;
+        
+        let motionThreshold = 15;
+        const MOTION_PIXEL_THRESHOLD = 0.02;
+        
+        let lastMotionTime = 0;
+        const MOTION_COOLDOWN = 250;
+        
+        let isPaused = false;
+        let motionEventCount = 0;
+        let sessionStartTime = 0;
+        
+        // Heatmap data
+        let heatmapData = null;
+        let showHeatmap = false;
+        
+        // Timeline data
+        let motionTimeline = []; // Stay on for 250ms after motion detected
+        
+        // Audio context for beep
+        let audioContext = null;
+        let lastBeepTime = 0;
+        const BEEP_COOLDOWN = 300; // Beep every 300ms max
+        
+        // Chart data
+        let chartData = {
+            labels: [],
+            tradStorage: [],
+            eventStorage: [],
+        };
+        let performanceChart = null;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const errorDiv = document.getElementById('error');
+        const tradVideo = document.getElementById('tradVideo');
+        const eventVideo = document.getElementById('eventVideo');
+        const tradCanvas = document.getElementById('tradCanvas');
+        const eventCanvas = document.getElementById('eventCanvas');
+        const comparison = document.getElementById('comparison');
+        const chartContainer = document.getElementById('chartContainer');
+        const sliderControl = document.getElementById('sliderControl');
+        const statsSummary = document.getElementById('statsSummary');
+        const sensitivitySlider = document.getElementById('sensitivitySlider');
+        const sensitivityValue = document.getElementById('sensitivityValue');
+        const heatmapCanvas = document.getElementById('heatmapCanvas');
+        const heatmapToggle = document.getElementById('heatmapToggle');
+        const timelineContainer = document.getElementById('timelineContainer');
+        const timelineWrapper = document.getElementById('timelineWrapper');
+
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
+        pauseBtn.addEventListener('click', togglePause);
+        
+        // Heatmap toggle
+        heatmapToggle.addEventListener('click', function() {
+            showHeatmap = !showHeatmap;
+            heatmapCanvas.style.display = showHeatmap ? 'block' : 'none';
+            this.textContent = showHeatmap ? 'Hide Heatmap' : 'Show Heatmap';
+            this.classList.toggle('active', showHeatmap);
+        });
+        
+        // Sensitivity slider handler
+        sensitivitySlider.addEventListener('input', function() {
+            motionThreshold = parseInt(this.value);
+            const labels = ['Very High', 'High', 'Medium-High', 'Medium', 'Medium-Low', 'Low'];
+            const index = Math.floor((30 - motionThreshold) / 5);
+            sensitivityValue.textContent = labels[Math.min(index, labels.length - 1)];
+        });
+        
+        // Initialize audio context
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        // Play beep sound
+        function playBeep() {
+            const currentTime = Date.now();
+            if (currentTime - lastBeepTime < BEEP_COOLDOWN) return;
+            
+            initAudio();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+            
+            lastBeepTime = currentTime;
+        }
+        
+        // Initialize Chart.js
+        function initChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Traditional Camera',
+                            data: chartData.tradStorage,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                        },
+                        {
+                            label: 'Event-Based Camera',
+                            data: chartData.eventStorage,
+                            borderColor: '#22c55e',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#cbd5e1',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' KB';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time (seconds)',
+                                color: '#cbd5e1',
+                                font: {
+                                    size: 13,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#cbd5e1',
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Storage (KB)',
+                                color: '#cbd5e1',
+                                font: {
+                                    size: 13,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#cbd5e1',
+                                font: {
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return value.toFixed(1) + ' KB';
+                                }
+                            },
+                            beginAtZero: true
+                        }
+                    },
+                    animation: {
+                        duration: 0,
+                    }
+                }
+            });
+        }
+        
+        // Update chart with new data
+        function updateChart() {
+            if (!performanceChart) return;
+            
+            performanceChart.data.labels = chartData.labels;
+            performanceChart.data.datasets[0].data = chartData.tradStorage;
+            performanceChart.data.datasets[1].data = chartData.eventStorage;
+            performanceChart.update('none');
+        }
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode: 'user' }
+                });
+
+                tradVideo.srcObject = stream;
+                eventVideo.srcObject = stream;
+                
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                pauseBtn.style.display = 'inline-block';
+                errorDiv.style.display = 'none';
+                comparison.style.display = 'block';
+                chartContainer.style.display = 'block';
+                sliderControl.style.display = 'block';
+                statsSummary.style.display = 'block';
+                timelineContainer.style.display = 'block';
+                
+                startTime = Date.now();
+                sessionStartTime = Date.now();
+                traditionalFps = 0;
+                eventFps = 0;
+                traditionalStorage = 0;
+                eventStorage = 0;
+                traditionalPower = 0;
+                eventPower = 0;
+                motionEventCount = 0;
+                isPaused = false;
+                chartData = { labels: [], tradStorage: [], eventStorage: [] };
+                motionTimeline = [];
+                
+                // Initialize heatmap
+                heatmapData = new Uint8Array(640 * 480);
+                heatmapData.fill(0);
+                
+                initAudio();
+                initChart();
+
+                await tradVideo.play();
+                await eventVideo.play();
+                
+                processFrames();
+            } catch (err) {
+                console.error('Camera error:', err);
+                let errorMsg = 'Failed to access camera. ';
+                
+                if (err.name === 'NotAllowedError') {
+                    errorMsg += 'Please allow camera permissions when prompted.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg += 'No camera found on your device.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg += 'Camera is in use by another application.';
+                } else {
+                    errorMsg += err.message;
+                }
+                
+                errorDiv.textContent = errorMsg;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            pauseBtn.style.display = 'none';
+            comparison.style.display = 'none';
+            chartContainer.style.display = 'none';
+            sliderControl.style.display = 'none';
+            statsSummary.style.display = 'none';
+            timelineContainer.style.display = 'none';
+        }
+        
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseBtn.textContent = isPaused ? '▶️ Resume' : '⏸ Pause';
+            pauseBtn.style.background = isPaused ? '#22c55e' : '#f59e0b';
+        }
+        
+        function updateStatsSummary() {
+            const runtime = Math.floor((Date.now() - sessionStartTime) / 1000);
+            document.getElementById('totalRuntime').textContent = runtime + 's';
+            document.getElementById('motionEvents').textContent = motionEventCount;
+            
+            const storageSaved = traditionalStorage > 0 ? Math.round((1 - eventStorage / traditionalStorage) * 100) : 0;
+            document.getElementById('avgSavings').textContent = storageSaved + '%';
+            
+            const efficiency = Math.min(100, Math.round((motionEventCount * 5 + storageSaved) / 2));
+            document.getElementById('efficiencyScore').textContent = efficiency + '%';
+        }
+        
+        function updateHeatmap(motionMask) {
+            if (!heatmapData || !motionMask) return;
+            
+            // Decay existing heatmap
+            for (let i = 0; i < heatmapData.length; i++) {
+                if (heatmapData[i] > 0) {
+                    heatmapData[i] = Math.max(0, heatmapData[i] - 2);
+                }
+            }
+            
+            // Add new motion
+            for (let i = 0; i < motionMask.length; i++) {
+                if (motionMask[i] === 1) {
+                    heatmapData[i] = Math.min(255, heatmapData[i] + 30);
+                }
+            }
+            
+            // Draw heatmap
+            if (showHeatmap) {
+                const ctx = heatmapCanvas.getContext('2d');
+                const imageData = ctx.createImageData(640, 480);
+                
+                for (let i = 0; i < heatmapData.length; i++) {
+                    const heat = heatmapData[i];
+                    const idx = i * 4;
+                    
+                    if (heat > 0) {
+                        // Color gradient: blue -> cyan -> yellow -> red
+                        if (heat < 64) {
+                            imageData.data[idx] = 0;
+                            imageData.data[idx + 1] = heat * 4;
+                            imageData.data[idx + 2] = 255;
+                        } else if (heat < 128) {
+                            imageData.data[idx] = 0;
+                            imageData.data[idx + 1] = 255;
+                            imageData.data[idx + 2] = 255 - (heat - 64) * 4;
+                        } else if (heat < 192) {
+                            imageData.data[idx] = (heat - 128) * 4;
+                            imageData.data[idx + 1] = 255;
+                            imageData.data[idx + 2] = 0;
+                        } else {
+                            imageData.data[idx] = 255;
+                            imageData.data[idx + 1] = 255 - (heat - 192) * 4;
+                            imageData.data[idx + 2] = 0;
+                        }
+                        imageData.data[idx + 3] = Math.min(200, heat);
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+        }
+        
+        function updateTimeline(hasMotion) {
+            const elapsed = (Date.now() - sessionStartTime) / 1000;
+            
+            if (hasMotion) {
+                motionTimeline.push({
+                    time: elapsed,
+                    duration: 0.25
+                });
+            }
+            
+            // Clear old markers
+            timelineWrapper.innerHTML = '';
+            
+            // Draw timeline bars for motion events
+            const maxTime = Math.max(30, elapsed);
+            motionTimeline.forEach(event => {
+                const bar = document.createElement('div');
+                bar.className = 'timeline-bar';
+                const leftPercent = (event.time / maxTime) * 100;
+                const widthPercent = (event.duration / maxTime) * 100;
+                bar.style.left = leftPercent + '%';
+                bar.style.width = widthPercent + '%';
+                timelineWrapper.appendChild(bar);
+            });
+            
+            // Current time marker
+            const marker = document.createElement('div');
+            marker.className = 'timeline-marker';
+            marker.style.left = ((elapsed / maxTime) * 100) + '%';
+            timelineWrapper.appendChild(marker);
+            
+            // Update end label
+            document.getElementById('timelineEnd').textContent = Math.ceil(maxTime) + 's';
+        }
+
+        function detectMotion(currentData, previousData, width, height) {
+            if (!previousData) return { hasMotion: false, motionMask: null };
+
+            let changedPixels = 0;
+            const totalPixels = width * height;
+            const motionMask = new Uint8Array(width * height);
+
+            for (let i = 0; i < currentData.length; i += 4) {
+                const pixelIndex = i / 4;
+                const rDiff = Math.abs(currentData[i] - previousData[i]);
+                const gDiff = Math.abs(currentData[i + 1] - previousData[i + 1]);
+                const bDiff = Math.abs(currentData[i + 2] - previousData[i + 2]);
+                
+                const avgDiff = (rDiff + gDiff + bDiff) / 3;
+                
+                if (avgDiff > motionThreshold) {
+                    changedPixels++;
+                    motionMask[pixelIndex] = 1;
+                }
+            }
+
+            const hasMotion = (changedPixels / totalPixels) > MOTION_PIXEL_THRESHOLD;
+            return { hasMotion, motionMask };
+        }
+
+        function processFrames() {
+            if (isPaused) {
+                animationId = requestAnimationFrame(processFrames);
+                return;
+            }
+            
+            if (tradVideo.readyState === tradVideo.HAVE_ENOUGH_DATA) {
+                const tradCtx = tradCanvas.getContext('2d');
+                const eventCtx = eventCanvas.getContext('2d');
+
+                // Traditional camera - always on
+                tradCtx.drawImage(tradVideo, 0, 0, 640, 480);
+                traditionalStorage += 0.1;
+                traditionalFps++;
+                traditionalPower = 150; // mW (constant power consumption)
+
+                // Event camera - only on motion
+                const currentImageData = tradCtx.getImageData(0, 0, 640, 480);
+                const motionResult = detectMotion(currentImageData.data, previousFrame, 640, 480);
+                const hasMotion = motionResult.hasMotion;
+                const motionMask = motionResult.motionMask;
+
+                const currentTime = Date.now();
+                const isEventCameraOn = hasMotion || (currentTime - lastMotionTime < MOTION_COOLDOWN);
+
+                if (hasMotion) {
+                    lastMotionTime = currentTime;
+                    playBeep();
+                    motionEventCount++;
+                }
+                
+                // Update heatmap with motion data
+                updateHeatmap(motionMask);
+                
+                // Update timeline
+                updateTimeline(hasMotion);
+
+                if (isEventCameraOn) {
+                    // Draw the video first
+                    eventCtx.drawImage(eventVideo, 0, 0, 640, 480);
+                    
+                    // Get image data and apply event camera effect only on moving parts
+                    const imageData = eventCtx.getImageData(0, 0, 640, 480);
+                    const data = imageData.data;
+                    
+                    // Create edge detection effect only on moving regions
+                    const edges = new Uint8ClampedArray(data.length);
+                    
+                    for (let y = 1; y < 479; y++) {
+                        for (let x = 1; x < 639; x++) {
+                            const idx = (y * 640 + x) * 4;
+                            const pixelIndex = y * 640 + x;
+                            
+                            // Only process if this pixel or nearby pixels have motion
+                            const hasLocalMotion = motionMask && (
+                                motionMask[pixelIndex] === 1 ||
+                                motionMask[pixelIndex - 1] === 1 ||
+                                motionMask[pixelIndex + 1] === 1 ||
+                                motionMask[pixelIndex - 640] === 1 ||
+                                motionMask[pixelIndex + 640] === 1
+                            );
+                            
+                            if (hasLocalMotion) {
+                                // Get surrounding pixels for edge detection
+                                const center = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                                const right = (data[idx + 4] + data[idx + 5] + data[idx + 6]) / 3;
+                                const bottom = (data[idx + 2560] + data[idx + 2561] + data[idx + 2562]) / 3;
+                                
+                                // Calculate edge strength
+                                const edgeX = Math.abs(center - right);
+                                const edgeY = Math.abs(center - bottom);
+                                const edge = Math.sqrt(edgeX * edgeX + edgeY * edgeY);
+                                
+                                // Create event camera effect: bright edges
+                                if (edge > 20) {
+                                    edges[idx] = 0;      // R
+                                    edges[idx + 1] = Math.min(255, edge * 4); // G - increased contrast
+                                    edges[idx + 2] = Math.min(255, edge * 5); // B - blue tint, increased contrast
+                                    edges[idx + 3] = 255; // A
+                                } else {
+                                    edges[idx] = 0;
+                                    edges[idx + 1] = 0;
+                                    edges[idx + 2] = 0;
+                                    edges[idx + 3] = 255;
+                                }
+                            } else {
+                                // Black out static regions
+                                edges[idx] = 0;
+                                edges[idx + 1] = 0;
+                                edges[idx + 2] = 0;
+                                edges[idx + 3] = 255;
+                            }
+                        }
+                    }
+                    
+                    // Apply the event camera effect
+                    const eventImageData = new ImageData(edges, 640, 480);
+                    eventCtx.putImageData(eventImageData, 0, 0);
+                    
+                    eventStorage += 0.1;
+                    eventFps++;
+                    eventPower = 80; // mW (power when active)
+                    
+                    document.getElementById('event-status').className = 'status-indicator status-on';
+                    document.getElementById('eventLabel').className = 'overlay-label label-motion';
+                    document.getElementById('eventLabel').textContent = 'MOTION DETECTED';
+                } else {
+                    // Black out the event camera when static
+                    eventCtx.fillStyle = 'black';
+                    eventCtx.fillRect(0, 0, 640, 480);
+                    
+                    // Reset FPS when camera turns off
+                    eventFps = 0;
+                    eventPower = 5; // mW (minimal power in standby)
+                    
+                    document.getElementById('event-status').className = 'status-indicator status-off';
+                    document.getElementById('eventLabel').className = 'overlay-label label-static';
+                    document.getElementById('eventLabel').textContent = 'STATIC - OFF';
+                }
+
+                previousFrame = new Uint8ClampedArray(currentImageData.data);
+
+                // Update stats
+                const elapsed = (Date.now() - startTime) / 1000;
+                const actualFps = elapsed > 0 ? Math.min(Math.round(traditionalFps / elapsed), 30) : 0;
+                
+                document.getElementById('tradFps').textContent = actualFps;
+                document.getElementById('tradStorage').textContent = traditionalStorage.toFixed(1) + ' KB';
+                document.getElementById('tradPower').textContent = traditionalPower.toFixed(0) + ' mW';
+                document.getElementById('eventFps').textContent = eventFps;
+                document.getElementById('eventStorage').textContent = eventStorage.toFixed(1) + ' KB';
+                document.getElementById('eventPower').textContent = eventPower.toFixed(0) + ' mW';
+
+                // Update comparison
+                const storageSaved = traditionalStorage > 0 ? Math.round((1 - eventStorage / traditionalStorage) * 100) : 0;
+                const powerSaved = traditionalPower > 0 ? Math.round((1 - eventPower / traditionalPower) * 100) : 0;
+                
+                document.getElementById('storageSaved').textContent = storageSaved + '%';
+                document.getElementById('powerSaved').textContent = powerSaved + '%';
+                
+                // Update statistics summary
+                updateStatsSummary();
+                
+                // Update chart data every 1 second for better performance
+                if (elapsed > 0 && Math.floor(elapsed) > chartData.labels.length) {
+                    chartData.labels.push(Math.floor(elapsed) + 's');
+                    chartData.tradStorage.push(parseFloat(traditionalStorage.toFixed(1)));
+                    chartData.eventStorage.push(parseFloat(eventStorage.toFixed(1)));
+                    
+                    // Keep only last 30 data points
+                    if (chartData.labels.length > 30) {
+                        chartData.labels.shift();
+                        chartData.tradStorage.shift();
+                        chartData.eventStorage.shift();
+                    }
+                    
+                    // Use setTimeout to update chart asynchronously to avoid blocking
+                    setTimeout(() => updateChart(), 0);
+                }
+            }
+
+            animationId = requestAnimationFrame(processFrames);
+        }
+    </script>
+</body>
+</html>
